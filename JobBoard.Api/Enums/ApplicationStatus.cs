@@ -2,11 +2,11 @@
 {
     public enum ApplicationStatus
     {
-        Submitted, 
-        UnderReview, 
-        Interviewed, 
-        Offered, 
-        Rejected,
+        Submitted,
+        UnderReview,
+        Interviewed,
+        Offered,
+        Rejected, 
         Withdrawn
     }
 }

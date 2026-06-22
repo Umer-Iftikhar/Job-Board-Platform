@@ -4,7 +4,7 @@
     {
         FullTime,
         PartTime,
-        Contract,
-        Remote 
+        Contract, 
+        Remote
     }
 }

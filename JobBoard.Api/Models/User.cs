@@ -2,8 +2,9 @@
 
 namespace JobBoard.Api.Models
 {
-    public class User :  IdentityUser
+    public class User : IdentityUser
     {
-        // Employer will have EmployerProfile linked via UserId.
+        // Navigation property for EmployerProfile
+        public EmployerProfile? EmployerProfile { get; set; }
     }
 }

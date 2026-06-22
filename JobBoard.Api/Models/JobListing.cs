@@ -1,4 +1,4 @@
-﻿using static System.Net.Mime.MediaTypeNames;
+﻿using JobBoard.Api.Enums;
 
 namespace JobBoard.Api.Models
 {
@@ -17,7 +17,7 @@ namespace JobBoard.Api.Models
         public DateTime? ExpiryDate { get; set; }
         public bool IsActive { get; set; } = true;
 
-        public EmployerProfile Employer { get; set; }
-        public ICollection<Application> Applications { get; set; }
+        public EmployerProfile Employer { get; set; } = new EmployerProfile();
+        public ICollection<Application> Applications { get; set; } = new List<Application>();
     }
 }
