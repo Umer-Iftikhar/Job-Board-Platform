@@ -8,11 +8,13 @@ using JobBoard.Api.Infrastructure.Services;
 using JobBoard.Api.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Events;
 using System.Text;
+using System.Threading.RateLimiting;
 
 // ---------- Logger ----------
 Log.Logger = new LoggerConfiguration()
@@ -64,6 +66,25 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// ---------- Rate Limiting ----------
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("ApplyPolicy", opt =>
+    {
+        opt.PermitLimit = 5;
+        opt.Window = TimeSpan.FromHours(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0; // No queue — reject immediately when limit hit
+    });
+
+    options.OnRejected = (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.WriteAsync("{\"message\":\"Too many applications from this IP. Please try again later.\"}", token);
+        return ValueTask.CompletedTask;
+    };
+});
+
 // ---------- Repositories ----------
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IEmployerProfileRepository, EmployerProfileRepository>();
@@ -83,6 +104,8 @@ builder.Services.AddScoped<IResumeService, ResumeService>();
 builder.Services.AddScoped<IJobApplicationService, JobApplicationService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<IFileValidationService, FileValidationService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
+
 builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
 builder.Services.AddHostedService<EmailProcessingService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
@@ -100,11 +123,7 @@ if (app.Environment.IsDevelopment())
     using (var scope = app.Services.CreateScope())
     {
         var services = scope.ServiceProvider;
-        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-        if (!await roleManager.RoleExistsAsync("Employer"))
-        {
-            await roleManager.CreateAsync(new IdentityRole("Employer"));
-        }
+        await SeedData.Initialize(services, builder.Configuration);
     }
 
     app.MapOpenApi();

@@ -3,6 +3,7 @@ using JobBoard.Api.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace JobBoard.Api.API.Controllers
 {
@@ -26,6 +27,7 @@ namespace JobBoard.Api.API.Controllers
 
         [HttpPost]
         [AllowAnonymous]
+        [EnableRateLimiting("ApplyPolicy")]
         public async Task<ActionResult<JobApplicationDto>> Apply(
             [FromForm] CreateJobApplicationDto dto,
             IFormFile resume)
