@@ -7,5 +7,8 @@ namespace JobBoard.Api.Application.Interfaces
         Task<IEnumerable<JobListing>> GetActiveWithEmployerAsync();
         Task<IEnumerable<JobListing>> GetByEmployerAsync(Guid employerProfileId);
         Task<JobListing?> GetByIdWithApplicationsAsync(Guid id);
+        Task<IEnumerable<JobListing>> GetAllWithEmployerAsync(bool includeDeleted);
+        Task HardDeleteAsync(Guid id);
+        Task SoftDeleteByEmployerAsync(Guid employerProfileId);
     }
 }

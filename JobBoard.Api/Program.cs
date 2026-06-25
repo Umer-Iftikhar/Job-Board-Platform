@@ -93,6 +93,7 @@ builder.Services.AddScoped<IJobListingRepository, JobListingRepository>();
 builder.Services.AddScoped<IResumeRepository, ResumeRepository>();
 builder.Services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<IAdminActionLogRepository, AdminActionLogRepository>();
 
 // ---------- Services ----------
 builder.Services.AddScoped<IJwtService, JwtService>();
