@@ -12,13 +12,16 @@ namespace JobBoard.Api.API.Controllers
     {
         private readonly IJobApplicationService _applicationService;
         private readonly IFileStorageService _fileStorageService;
+        private readonly IFileValidationService _fileValidationService;
 
         public ApplicationsController(
             IJobApplicationService applicationService,
-            IFileStorageService fileStorageService)
+            IFileStorageService fileStorageService,
+            IFileValidationService fileValidationService)
         {
             _applicationService = applicationService;
             _fileStorageService = fileStorageService;
+            _fileValidationService = fileValidationService;
         }
 
         [HttpPost]
@@ -27,8 +30,9 @@ namespace JobBoard.Api.API.Controllers
             [FromForm] CreateJobApplicationDto dto,
             IFormFile resume)
         {
-            if (resume == null || resume.Length == 0)
-                return BadRequest(new { message = "Resume file is required." });
+            var validation = _fileValidationService.ValidateResume(resume);
+            if (!validation.IsValid)
+                return BadRequest(new { message = validation.ErrorMessage });
 
             var fileUrl = await _fileStorageService.SaveFileAsync(resume, "resumes");
 

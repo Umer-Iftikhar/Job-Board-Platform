@@ -82,6 +82,7 @@ builder.Services.AddScoped<IJobListingService, JobListingService>();
 builder.Services.AddScoped<IResumeService, ResumeService>();
 builder.Services.AddScoped<IJobApplicationService, JobApplicationService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+builder.Services.AddScoped<IFileValidationService, FileValidationService>();
 
 // ---------- API ----------
 builder.Services.AddControllers();
