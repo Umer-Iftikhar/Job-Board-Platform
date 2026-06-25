@@ -17,10 +17,53 @@ namespace JobBoard.Api.Application.Services
             _employerRepository = employerRepository;
         }
 
-        public async Task<PagedResult<JobListingDto>> GetAllActiveAsync(PaginationParams pagination, JobListingSortParams sort)
+        public async Task<PagedResult<JobListingDto>> GetAllActiveAsync(
+        PaginationParams pagination,
+        JobListingSortParams sort,
+        JobListingFilterParams filter)
         {
             var query = (await _repository.GetActiveWithEmployerAsync())
                 .AsQueryable();
+
+            // Search (title or description contains term, case-insensitive)
+            if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+            {
+                var term = filter.SearchTerm.ToLowerInvariant();
+                query = query.Where(j =>
+                    j.Title.ToLower().Contains(term) ||
+                    j.Description.ToLower().Contains(term));
+            }
+
+            // Filter by type
+            if (filter.Type.HasValue)
+                query = query.Where(j => j.Type == filter.Type.Value);
+
+            // Filter by experience level
+            if (filter.Experience.HasValue)
+                query = query.Where(j => j.Experience == filter.Experience.Value);
+
+            // Filter by location
+            if (!string.IsNullOrWhiteSpace(filter.Location))
+            {
+                var loc = filter.Location.ToLowerInvariant();
+                query = query.Where(j => j.Location != null && j.Location.ToLower().Contains(loc));
+            }
+
+            // Remote filter
+            if (filter.IsRemote.HasValue)
+            {
+                if (filter.IsRemote.Value)
+                    query = query.Where(j => j.Location == null || j.Location.ToLower().Contains("remote"));
+                else
+                    query = query.Where(j => j.Location != null && !j.Location.ToLower().Contains("remote"));
+            }
+
+            // Salary range
+            if (filter.MinSalary.HasValue)
+                query = query.Where(j => j.SalaryMax == null || j.SalaryMax >= filter.MinSalary.Value);
+
+            if (filter.MaxSalary.HasValue)
+                query = query.Where(j => j.SalaryMin == null || j.SalaryMin <= filter.MaxSalary.Value);
 
             // Sorting
             query = sort.SortBy?.ToLowerInvariant() switch
@@ -36,7 +79,7 @@ namespace JobBoard.Api.Application.Services
                     : query.OrderByDescending(j => j.SalaryMax),
                 _ => sort.SortOrder == "asc"
                     ? query.OrderBy(j => j.CreatedAt)
-                    : query.OrderByDescending(j => j.CreatedAt) // default: newest first
+                    : query.OrderByDescending(j => j.CreatedAt)
             };
 
             var totalCount = query.Count();

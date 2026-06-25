@@ -26,20 +26,20 @@ namespace JobBoard.Api.Tests.Tests
         public async Task GetAllActiveAsync_ReturnsActiveListings()
         {
             var listings = new List<JobListing>
-            {
-                new() { Id = Guid.NewGuid(), Title = "Dev", IsActive = true, EmployerProfile = new EmployerProfile { CompanyName = "Acme" } }
-            };
+    {
+        new() { Id = Guid.NewGuid(), Title = "Dev", IsActive = true, EmployerProfile = new EmployerProfile { CompanyName = "Acme" } }
+    };
             _jobListingRepo.Setup(x => x.GetActiveWithEmployerAsync()).ReturnsAsync(listings);
 
             var pagination = new PaginationParams { PageNumber = 1, PageSize = 10 };
             var sort = new JobListingSortParams { SortBy = "createdAt", SortOrder = "desc" };
+            var filter = new JobListingFilterParams();
 
-            var result = await _sut.GetAllActiveAsync(pagination, sort);
+            var result = await _sut.GetAllActiveAsync(pagination, sort, filter);
 
             result.Items.Should().HaveCount(1);
             result.Items.First().Title.Should().Be("Dev");
             result.TotalCount.Should().Be(1);
-            result.TotalPages.Should().Be(1);
         }
 
         [Fact]

@@ -23,9 +23,10 @@ namespace JobBoard.Api.API.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<PagedResult<JobListingDto>>> GetAll(
             [FromQuery] PaginationParams pagination,
-            [FromQuery] JobListingSortParams sort)
+            [FromQuery] JobListingSortParams sort,
+            [FromQuery] JobListingFilterParams filter)
         {
-            var jobs = await _jobListingService.GetAllActiveAsync(pagination, sort);
+            var jobs = await _jobListingService.GetAllActiveAsync(pagination, sort, filter);
             return Ok(jobs);
         }
 
