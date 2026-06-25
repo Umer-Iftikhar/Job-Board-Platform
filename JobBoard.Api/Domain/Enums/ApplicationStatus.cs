@@ -1,12 +1,12 @@
-﻿namespace JobBoard.Api.Enums
+﻿namespace JobBoard.Api.Domain.Enums
 {
     public enum ApplicationStatus
     {
         Submitted,
         UnderReview,
-        Interviewed,
+        Interview,
         Offered,
-        Rejected, 
+        Rejected,
         Withdrawn
     }
 }

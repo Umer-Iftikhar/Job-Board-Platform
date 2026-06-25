@@ -1,11 +1,11 @@
-﻿namespace JobBoard.Api.Enums
+﻿namespace JobBoard.Api.Domain.Enums
 {
     public enum ExperienceLevel
     {
-        Internship,
         Entry,
         Mid,
         Senior,
-        Lead
+        Lead,
+        Executive
     }
 }
