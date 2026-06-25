@@ -46,7 +46,6 @@ namespace JobBoard.Api.API.Controllers
                 return BadRequest(new { message = "Employer profile not found." });
 
             var job = await _jobListingService.CreateAsync(employer.Id, dto);
-            // 201 Created with Location header
             return CreatedAtAction(nameof(GetById), new { id = job.Id }, job);
         }
 
@@ -67,7 +66,7 @@ namespace JobBoard.Api.API.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var result = await _jobListingService.DeleteAsync(id, userId!);
             if (!result) return NotFound();
-            return NoContent(); // 204 NoContent — standard for successful DELETE
+            return NoContent(); 
         }
     }
 }

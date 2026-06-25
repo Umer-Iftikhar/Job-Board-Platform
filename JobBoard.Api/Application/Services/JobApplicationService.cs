@@ -74,7 +74,12 @@ namespace JobBoard.Api.Application.Services
             };
 
             await _repository.AddAsync(application);
-            return MapToDto(application);
+
+            // Reload with navigation properties for mapping
+            var created = await _repository.GetByIdWithDetailsAsync(application.Id)
+                ?? throw new InvalidOperationException("Failed to load created application.");
+
+            return MapToDto(created);
         }
 
         public async Task<JobApplicationDto?> UpdateStatusAsync(Guid id, UpdateApplicationStatusDto dto, string userId)

@@ -1,7 +1,6 @@
 ﻿using JobBoard.Api.Application.DTOs;
 using JobBoard.Api.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -36,12 +35,10 @@ namespace JobBoard.Api.API.Controllers
             try
             {
                 var application = await _applicationService.CreateAsync(dto, fileUrl);
-                // 201 Created with Location header
                 return CreatedAtAction(nameof(GetById), new { id = application.Id }, application);
             }
             catch (InvalidOperationException ex)
             {
-                // 409 Conflict — duplicate application
                 return Conflict(new { message = ex.Message });
             }
         }

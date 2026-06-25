@@ -5,6 +5,7 @@ using JobBoard.Api.Infrastructure.Data;
 using JobBoard.Api.Infrastructure.Identity;
 using JobBoard.Api.Infrastructure.Repositories;
 using JobBoard.Api.Infrastructure.Services;
+using JobBoard.Api.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -106,6 +107,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

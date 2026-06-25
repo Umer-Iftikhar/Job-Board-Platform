@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="JobBoard.Api.Tests/JobBoard.Api.Tests.csproj" />
+  <Project Path="JobBoard.Api/JobBoard.Api.csproj" />
+</Solution>
