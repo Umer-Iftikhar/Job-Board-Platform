@@ -17,10 +17,43 @@ namespace JobBoard.Api.Application.Services
             _employerRepository = employerRepository;
         }
 
-        public async Task<IEnumerable<JobListingDto>> GetAllActiveAsync()
+        public async Task<PagedResult<JobListingDto>> GetAllActiveAsync(PaginationParams pagination, JobListingSortParams sort)
         {
-            var listings = await _repository.GetActiveWithEmployerAsync();
-            return listings.Select(MapToDto);
+            var query = (await _repository.GetActiveWithEmployerAsync())
+                .AsQueryable();
+
+            // Sorting
+            query = sort.SortBy?.ToLowerInvariant() switch
+            {
+                "title" => sort.SortOrder == "asc"
+                    ? query.OrderBy(j => j.Title)
+                    : query.OrderByDescending(j => j.Title),
+                "salarymin" => sort.SortOrder == "asc"
+                    ? query.OrderBy(j => j.SalaryMin)
+                    : query.OrderByDescending(j => j.SalaryMin),
+                "salarymax" => sort.SortOrder == "asc"
+                    ? query.OrderBy(j => j.SalaryMax)
+                    : query.OrderByDescending(j => j.SalaryMax),
+                _ => sort.SortOrder == "asc"
+                    ? query.OrderBy(j => j.CreatedAt)
+                    : query.OrderByDescending(j => j.CreatedAt) // default: newest first
+            };
+
+            var totalCount = query.Count();
+
+            var items = query
+                .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                .Take(pagination.PageSize)
+                .Select(MapToDto)
+                .ToList();
+
+            return new PagedResult<JobListingDto>
+            {
+                Items = items,
+                PageNumber = pagination.PageNumber,
+                PageSize = pagination.PageSize,
+                TotalCount = totalCount
+            };
         }
 
         public async Task<JobListingDto?> GetByIdAsync(Guid id)
@@ -84,10 +117,9 @@ namespace JobBoard.Api.Application.Services
             if (employer == null || listing.EmployerProfileId != employer.Id)
                 return false;
 
-            // Soft delete
             listing.IsDeleted = true;
             listing.DeletedAt = DateTime.UtcNow;
-            listing.IsActive = false; // Also mark inactive so it doesn't appear in employer's active list
+            listing.IsActive = false;
 
             await _repository.UpdateAsync(listing);
             return true;

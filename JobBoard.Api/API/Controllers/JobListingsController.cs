@@ -21,9 +21,11 @@ namespace JobBoard.Api.API.Controllers
 
         [HttpGet]
         [AllowAnonymous]
-        public async Task<ActionResult<IEnumerable<JobListingDto>>> GetAll()
+        public async Task<ActionResult<PagedResult<JobListingDto>>> GetAll(
+            [FromQuery] PaginationParams pagination,
+            [FromQuery] JobListingSortParams sort)
         {
-            var jobs = await _jobListingService.GetAllActiveAsync();
+            var jobs = await _jobListingService.GetAllActiveAsync(pagination, sort);
             return Ok(jobs);
         }
 
@@ -66,7 +68,7 @@ namespace JobBoard.Api.API.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var result = await _jobListingService.DeleteAsync(id, userId!);
             if (!result) return NotFound();
-            return NoContent(); 
+            return NoContent();
         }
     }
 }
