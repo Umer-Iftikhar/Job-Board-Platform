@@ -83,6 +83,9 @@ builder.Services.AddScoped<IResumeService, ResumeService>();
 builder.Services.AddScoped<IJobApplicationService, JobApplicationService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<IFileValidationService, FileValidationService>();
+builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
+builder.Services.AddHostedService<EmailProcessingService>();
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
 // ---------- API ----------
 builder.Services.AddControllers();

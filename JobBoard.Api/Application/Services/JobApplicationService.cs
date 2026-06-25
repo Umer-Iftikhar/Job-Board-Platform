@@ -11,19 +11,25 @@ namespace JobBoard.Api.Application.Services
         private readonly ICandidateService _candidateService;
         private readonly IResumeService _resumeService;
         private readonly IEmployerProfileRepository _employerRepository;
+        private readonly IBackgroundTaskQueue _taskQueue;
+        private readonly IEmailService _emailService;
 
         public JobApplicationService(
             IJobApplicationRepository repository,
             IJobListingRepository jobListingRepository,
             ICandidateService candidateService,
             IResumeService resumeService,
-            IEmployerProfileRepository employerRepository)
+            IEmployerProfileRepository employerRepository,
+            IBackgroundTaskQueue taskQueue,
+            IEmailService emailService)
         {
             _repository = repository;
             _jobListingRepository = jobListingRepository;
             _candidateService = candidateService;
             _resumeService = resumeService;
             _employerRepository = employerRepository;
+            _taskQueue = taskQueue;
+            _emailService = emailService;
         }
 
         public async Task<IEnumerable<JobApplicationDto>> GetByJobListingAsync(Guid jobListingId, string userId)
@@ -88,11 +94,26 @@ namespace JobBoard.Api.Application.Services
             if (application == null) return null;
 
             var employer = await _employerRepository.GetByUserIdAsync(userId);
-            if (employer == null || application.JobListing!.EmployerProfileId != employer.Id)
+            if (employer == null || application.JobListing.EmployerProfileId != employer.Id)
                 return null;
 
+            var oldStatus = application.Status;
             application.Status = dto.Status;
             await _repository.UpdateAsync(application);
+
+            // Fire email notification if status actually changed
+            if (oldStatus != dto.Status)
+            {
+                await _taskQueue.QueueAsync(async ct =>
+                {
+                    await _emailService.SendApplicationStatusChangedAsync(
+                        application.Candidate.Email,
+                        application.Candidate.Name,
+                        application.JobListing.Title,
+                        dto.Status.ToString());
+                });
+            }
+
             return MapToDto(application);
         }
 

@@ -16,6 +16,8 @@ namespace JobBoard.Api.Tests.Tests
         private readonly Mock<ICandidateService> _candidateService;
         private readonly Mock<IResumeService> _resumeService;
         private readonly Mock<IEmployerProfileRepository> _employerRepo;
+        private readonly Mock<IBackgroundTaskQueue> _taskQueue;
+        private readonly Mock<IEmailService> _emailService;
         private readonly JobApplicationService _sut;
 
         public JobApplicationServiceTests()
@@ -25,7 +27,16 @@ namespace JobBoard.Api.Tests.Tests
             _candidateService = new Mock<ICandidateService>();
             _resumeService = new Mock<IResumeService>();
             _employerRepo = new Mock<IEmployerProfileRepository>();
-            _sut = new JobApplicationService(_appRepo.Object, _jobRepo.Object, _candidateService.Object, _resumeService.Object, _employerRepo.Object);
+            _taskQueue = new Mock<IBackgroundTaskQueue>();
+            _emailService = new Mock<IEmailService>();
+            _sut = new JobApplicationService(
+                _appRepo.Object,
+                _jobRepo.Object,
+                _candidateService.Object,
+                _resumeService.Object,
+                _employerRepo.Object,
+                _taskQueue.Object,
+                _emailService.Object);
         }
 
         [Fact]
@@ -156,5 +167,33 @@ namespace JobBoard.Api.Tests.Tests
 
             result.Should().BeTrue();
         }
+
+        [Fact]
+        public async Task UpdateStatusAsync_StatusChanged_EnqueuesEmail()
+        {
+            var id = Guid.NewGuid();
+            var userId = "user-123";
+            var employer = new EmployerProfile { Id = Guid.NewGuid(), UserId = userId };
+            var application = new JobApplication
+            {
+                Id = id,
+                JobListing = new JobListing { EmployerProfileId = employer.Id, EmployerProfile = employer, Title = "Dev" },
+                Candidate = new Candidate { Email = "john@example.com", Name = "John" },
+                Resume = new Resume(),
+                Status = ApplicationStatus.Submitted
+            };
+            var dto = new UpdateApplicationStatusDto { Status = ApplicationStatus.Interview };
+
+            _appRepo.Setup(x => x.GetByIdWithDetailsAsync(id)).ReturnsAsync(application);
+            _employerRepo.Setup(x => x.GetByUserIdAsync(userId)).ReturnsAsync(employer);
+            _appRepo.Setup(x => x.UpdateAsync(It.IsAny<JobApplication>())).Returns(Task.CompletedTask);
+            _taskQueue.Setup(x => x.QueueAsync(It.IsAny<Func<CancellationToken, ValueTask>>())).Returns(ValueTask.CompletedTask);
+
+            var result = await _sut.UpdateStatusAsync(id, dto, userId);
+
+            result.Should().NotBeNull();
+            _taskQueue.Verify(x => x.QueueAsync(It.IsAny<Func<CancellationToken, ValueTask>>()), Times.Once);
+        }
     }
 }
+
