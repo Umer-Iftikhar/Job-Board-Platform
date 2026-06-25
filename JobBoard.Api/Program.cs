@@ -1,5 +1,10 @@
-using JobBoard.Api.Data;
-using JobBoard.Api.Models;
+using JobBoard.Api.Application.Interfaces;
+using JobBoard.Api.Application.Services;
+using JobBoard.Api.Domain.Entities;
+using JobBoard.Api.Infrastructure.Data;
+using JobBoard.Api.Infrastructure.Identity;
+using JobBoard.Api.Infrastructure.Repositories;
+using JobBoard.Api.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -8,19 +13,16 @@ using Serilog;
 using Serilog.Events;
 using System.Text;
 
-
 // ---------- Logger ----------
-Log.Logger = new LoggerConfiguration() 
+Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
     .WriteTo.Console()
-    .WriteTo.File("logs/app.log", rollingInterval: RollingInterval.Day) 
+    .WriteTo.File("logs/app.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
-
 var builder = WebApplication.CreateBuilder(args);
-
 builder.Host.UseSerilog();
 
 // ---------- Database ----------
@@ -28,67 +30,87 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found");
 var serverVersion = new MySqlServerVersion(new Version(8, 0, 31));
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-{
-    options.UseMySql(connectionString, serverVersion);
-});
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseMySql(connectionString, serverVersion));
 
-// ---------- Identity (core only, no cookies) ----------
-builder.Services.AddIdentityCore<User>()
+// ---------- Identity ----------
+builder.Services.AddIdentityCore<ApplicationUser>()
     .AddRoles<IdentityRole>()
-    .AddEntityFrameworkStores<AppDbContext>();
+    .AddEntityFrameworkStores<ApplicationDbContext>();
 
-// ----------- JWT -----------
+// ---------- JWT ----------
 var jwtKey = builder.Configuration["Jwt:Key"]
-        ?? throw new InvalidOperationException("JWT Key is missing.");
-
+    ?? throw new InvalidOperationException("JWT Key is missing.");
 
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-    .AddJwtBearer(options =>
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-        };
-    });
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    };
+});
+
 builder.Services.AddAuthorization();
 
+// ---------- Repositories ----------
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IEmployerProfileRepository, EmployerProfileRepository>();
+builder.Services.AddScoped<ICandidateRepository, CandidateRepository>();
+builder.Services.AddScoped<IJobListingRepository, JobListingRepository>();
+builder.Services.AddScoped<IResumeRepository, ResumeRepository>();
+builder.Services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
-// Add services to the container.
+// ---------- Services ----------
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IEmployerProfileService, EmployerProfileService>();
+builder.Services.AddScoped<ICandidateService, CandidateService>();
+builder.Services.AddScoped<IJobListingService, JobListingService>();
+builder.Services.AddScoped<IResumeService, ResumeService>();
+builder.Services.AddScoped<IJobApplicationService, JobApplicationService>();
+builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
+// ---------- API ----------
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ---------- Pipeline ----------
 if (app.Environment.IsDevelopment())
 {
-    using (var scope = app.Services.CreateScope())   
+    using (var scope = app.Services.CreateScope())
     {
         var services = scope.ServiceProvider;
-        await SeedData.Initialize(services);
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+        if (!await roleManager.RoleExistsAsync("Employer"))
+        {
+            await roleManager.CreateAsync(new IdentityRole("Employer"));
+        }
     }
 
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
-
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 try

@@ -15,6 +15,7 @@ namespace JobBoard.Api.Infrastructure.Data
         public DbSet<JobListing> JobListings { get; set; }
         public DbSet<Resume> Resumes { get; set; }
         public DbSet<JobApplication> JobApplications { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -25,6 +26,7 @@ namespace JobBoard.Api.Infrastructure.Data
             modelBuilder.ApplyConfiguration(new JobListingConfiguration());
             modelBuilder.ApplyConfiguration(new ResumeConfiguration());
             modelBuilder.ApplyConfiguration(new JobApplicationConfiguration());
+            modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
         }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

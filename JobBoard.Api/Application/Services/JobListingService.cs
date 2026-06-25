@@ -2,7 +2,7 @@
 using JobBoard.Api.Application.Interfaces;
 using JobBoard.Api.Domain.Entities;
 
-namespace JobBoard.Api.Infrastructure.Repositories
+namespace JobBoard.Api.Application.Services
 {
     public class JobListingService : IJobListingService
     {
