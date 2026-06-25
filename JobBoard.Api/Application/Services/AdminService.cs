@@ -10,58 +10,28 @@ namespace JobBoard.Api.Application.Services
     {
         private readonly IJobListingRepository _jobListingRepository;
         private readonly IEmployerProfileRepository _employerProfileRepository;
-        private readonly IRepository<AdminActionLog> _logRepository;
-        private readonly ApplicationDbContext _context;
+        private readonly IAdminActionLogRepository _logRepository;
 
         public AdminService(
             IJobListingRepository jobListingRepository,
             IEmployerProfileRepository employerProfileRepository,
-            IRepository<AdminActionLog> logRepository,
-            ApplicationDbContext context)
+            IAdminActionLogRepository logRepository)
         {
             _jobListingRepository = jobListingRepository;
             _employerProfileRepository = employerProfileRepository;
             _logRepository = logRepository;
-            _context = context;
         }
 
         public async Task<PagedResult<JobListingDto>> GetAllJobListingsAsync(PaginationParams pagination, bool includeDeleted = false)
         {
-            var query = _context.JobListings
-                .Include(j => j.EmployerProfile)
-                .AsQueryable();
+            var allListings = await _jobListingRepository.GetAllWithEmployerAsync(includeDeleted);
+            var totalCount = allListings.Count();
 
-            if (!includeDeleted)
-                query = query.Where(j => !j.IsDeleted);
-
-            var totalCount = await query.CountAsync();
-
-            var items = await query
-                .OrderByDescending(j => j.CreatedAt)
+            var items = allListings
                 .Skip((pagination.PageNumber - 1) * pagination.PageSize)
                 .Take(pagination.PageSize)
-                .Select(j => new JobListingDto
-                {
-                    Id = j.Id,
-                    Title = j.Title,
-                    Description = j.Description,
-                    Type = j.Type.ToString(),
-                    Experience = j.Experience.ToString(),
-                    Location = j.Location,
-                    SalaryMin = j.SalaryMin,
-                    SalaryMax = j.SalaryMax,
-                    IsActive = j.IsActive,
-                    CreatedAt = j.CreatedAt,
-                    UpdatedAt = j.UpdatedAt,
-                    Employer = new EmployerProfileSummaryDto
-                    {
-                        Id = j.EmployerProfile.Id,
-                        CompanyName = j.EmployerProfile.CompanyName,
-                        Website = j.EmployerProfile.Website,
-                        Location = j.EmployerProfile.Location
-                    }
-                })
-                .ToListAsync();
+                .Select(MapToDto)
+                .ToList();
 
             return new PagedResult<JobListingDto>
             {
@@ -74,14 +44,10 @@ namespace JobBoard.Api.Application.Services
 
         public async Task<bool> HardDeleteJobListingAsync(Guid id)
         {
-            var listing = await _context.JobListings
-                .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(j => j.Id == id);
-
+            var listing = await _jobListingRepository.GetByIdAsync(id);
             if (listing == null) return false;
 
-            _context.JobListings.Remove(listing);
-            await _context.SaveChangesAsync();
+            await _jobListingRepository.HardDeleteAsync(id);
             return true;
         }
 
@@ -90,38 +56,48 @@ namespace JobBoard.Api.Application.Services
             var employer = await _employerProfileRepository.GetByIdAsync(employerProfileId);
             if (employer == null) return false;
 
-            // Soft delete all their job listings
-            var listings = await _context.JobListings
-                .Where(j => j.EmployerProfileId == employerProfileId && !j.IsDeleted)
-                .ToListAsync();
-
-            foreach (var listing in listings)
-            {
-                listing.IsDeleted = true;
-                listing.DeletedAt = DateTime.UtcNow;
-                listing.IsActive = false;
-            }
-
-            await _context.SaveChangesAsync();
+            await _jobListingRepository.SoftDeleteByEmployerAsync(employerProfileId);
             return true;
         }
 
         public async Task<IEnumerable<AdminActionLogDto>> GetActionLogsAsync(int count = 100)
         {
-            return await _context.AdminActionLogs
-                .OrderByDescending(l => l.ActionDate)
-                .Take(count)
-                .Select(l => new AdminActionLogDto
+            var logs = await _logRepository.GetRecentAsync(count);
+            return logs.Select(l => new AdminActionLogDto
+            {
+                Id = l.Id,
+                AdminUserId = l.AdminUserId,
+                Action = l.Action,
+                EntityType = l.EntityType,
+                EntityId = l.EntityId,
+                Details = l.Details,
+                ActionDate = l.ActionDate
+            });
+        }
+
+        private static JobListingDto MapToDto(JobListing listing)
+        {
+            return new JobListingDto
+            {
+                Id = listing.Id,
+                Title = listing.Title,
+                Description = listing.Description,
+                Type = listing.Type.ToString(),
+                Experience = listing.Experience.ToString(),
+                Location = listing.Location,
+                SalaryMin = listing.SalaryMin,
+                SalaryMax = listing.SalaryMax,
+                IsActive = listing.IsActive,
+                CreatedAt = listing.CreatedAt,
+                UpdatedAt = listing.UpdatedAt,
+                Employer = listing.EmployerProfile == null ? null! : new EmployerProfileSummaryDto
                 {
-                    Id = l.Id,
-                    AdminUserId = l.AdminUserId,
-                    Action = l.Action,
-                    EntityType = l.EntityType,
-                    EntityId = l.EntityId,
-                    Details = l.Details,
-                    ActionDate = l.ActionDate
-                })
-                .ToListAsync();
+                    Id = listing.EmployerProfile.Id,
+                    CompanyName = listing.EmployerProfile.CompanyName,
+                    Website = listing.EmployerProfile.Website,
+                    Location = listing.EmployerProfile.Location
+                }
+            };
         }
     }
 }
