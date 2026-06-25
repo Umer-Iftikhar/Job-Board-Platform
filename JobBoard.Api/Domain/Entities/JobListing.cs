@@ -13,6 +13,10 @@ namespace JobBoard.Api.Domain.Entities
         public decimal? SalaryMax { get; set; }
         public bool IsActive { get; set; } = true;
 
+        // Soft delete fields
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
+
         public Guid EmployerProfileId { get; set; }
         public EmployerProfile EmployerProfile { get; set; } = null!;
 

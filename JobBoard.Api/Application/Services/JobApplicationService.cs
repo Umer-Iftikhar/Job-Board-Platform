@@ -122,7 +122,7 @@ namespace JobBoard.Api.Application.Services
                     Email = application.Candidate.Email,
                     CreatedAt = application.Candidate.CreatedAt
                 },
-                JobListing = new JobListingSummaryDto
+                JobListing = application.JobListing == null ? null! : new JobListingSummaryDto
                 {
                     Id = application.JobListing.Id,
                     Title = application.JobListing.Title,

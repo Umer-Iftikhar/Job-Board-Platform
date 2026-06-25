@@ -84,7 +84,12 @@ namespace JobBoard.Api.Application.Services
             if (employer == null || listing.EmployerProfileId != employer.Id)
                 return false;
 
-            await _repository.DeleteAsync(listing);
+            // Soft delete
+            listing.IsDeleted = true;
+            listing.DeletedAt = DateTime.UtcNow;
+            listing.IsActive = false; // Also mark inactive so it doesn't appear in employer's active list
+
+            await _repository.UpdateAsync(listing);
             return true;
         }
 

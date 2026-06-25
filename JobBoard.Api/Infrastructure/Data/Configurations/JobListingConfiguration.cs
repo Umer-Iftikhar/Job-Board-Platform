@@ -34,6 +34,11 @@ namespace JobBoard.Api.Infrastructure.Data.Configurations
             builder.Property(j => j.SalaryMax)
                 .HasPrecision(18, 2);
 
+            // Soft delete filter — automatically excludes deleted rows from all queries
+            builder.HasQueryFilter(j => !j.IsDeleted);
+
+            builder.HasIndex(j => j.IsDeleted);
+
             builder.HasOne(j => j.EmployerProfile)
                 .WithMany(e => e.JobListings)
                 .HasForeignKey(j => j.EmployerProfileId)

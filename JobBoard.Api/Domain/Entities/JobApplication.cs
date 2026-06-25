@@ -8,7 +8,7 @@ namespace JobBoard.Api.Domain.Entities
         public Candidate Candidate { get; set; } = null!;
 
         public Guid JobListingId { get; set; }
-        public JobListing JobListing { get; set; } = null!;
+        public JobListing? JobListing { get; set; } = null!;
 
         public Guid ResumeId { get; set; }
         public Resume Resume { get; set; } = null!;
