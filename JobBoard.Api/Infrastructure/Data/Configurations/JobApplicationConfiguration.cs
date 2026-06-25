@@ -36,7 +36,7 @@ namespace JobBoard.Api.Infrastructure.Data.Configurations
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Matching query filter — applications for deleted jobs are hidden
-            builder.HasQueryFilter(a => !a.JobListing.IsDeleted);
+            builder.HasQueryFilter(a => a.JobListing != null && !a.JobListing.IsDeleted);
 
             builder.HasIndex(a => new { a.CandidateId, a.JobListingId })
                 .IsUnique();

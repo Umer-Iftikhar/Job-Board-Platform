@@ -88,7 +88,7 @@ namespace JobBoard.Api.Application.Services
             if (application == null) return null;
 
             var employer = await _employerRepository.GetByUserIdAsync(userId);
-            if (employer == null || application.JobListing.EmployerProfileId != employer.Id)
+            if (employer == null || application.JobListing!.EmployerProfileId != employer.Id)
                 return null;
 
             application.Status = dto.Status;
@@ -104,7 +104,7 @@ namespace JobBoard.Api.Application.Services
             var employer = await _employerRepository.GetByUserIdAsync(userId);
             if (employer == null) return false;
 
-            return application.JobListing.EmployerProfileId == employer.Id;
+            return application.JobListing!.EmployerProfileId == employer.Id;
         }
 
         private static JobApplicationDto MapToDto(JobApplication application)

@@ -5,11 +5,7 @@ using JobBoard.Api.Application.Services;
 using JobBoard.Api.Domain.Entities;
 using JobBoard.Api.Domain.Enums;
 using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace JobBoard.Api.Tests.Tests
 {
@@ -30,15 +26,20 @@ namespace JobBoard.Api.Tests.Tests
         public async Task GetAllActiveAsync_ReturnsActiveListings()
         {
             var listings = new List<JobListing>
-        {
-            new() { Id = Guid.NewGuid(), Title = "Dev", IsActive = true, EmployerProfile = new EmployerProfile { CompanyName = "Acme" } }
-        };
+            {
+                new() { Id = Guid.NewGuid(), Title = "Dev", IsActive = true, EmployerProfile = new EmployerProfile { CompanyName = "Acme" } }
+            };
             _jobListingRepo.Setup(x => x.GetActiveWithEmployerAsync()).ReturnsAsync(listings);
 
-            var result = await _sut.GetAllActiveAsync();
+            var pagination = new PaginationParams { PageNumber = 1, PageSize = 10 };
+            var sort = new JobListingSortParams { SortBy = "createdAt", SortOrder = "desc" };
 
-            result.Should().HaveCount(1);
-            result.First().Title.Should().Be("Dev");
+            var result = await _sut.GetAllActiveAsync(pagination, sort);
+
+            result.Items.Should().HaveCount(1);
+            result.Items.First().Title.Should().Be("Dev");
+            result.TotalCount.Should().Be(1);
+            result.TotalPages.Should().Be(1);
         }
 
         [Fact]
