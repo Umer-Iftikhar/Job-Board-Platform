@@ -92,7 +92,6 @@ Swagger UI: `https://localhost:5001/swagger`
  
 
 ![Swagger UI](docs/swagger-screenshot.png)
-Add your screenshot to docs/swagger-screenshot.png and uncomment the line above.
 
  
 ---
